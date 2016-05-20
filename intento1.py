@@ -8,7 +8,7 @@ primer intento de chi cuadrado para los datos experimentales de supernovas
 from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import integrate
+from scipy.integrate import quad
 import scipy.stats
 from scipy.optimize import leastsq
 from scipy import optimize as opt
@@ -23,9 +23,9 @@ def leer_archivo(nombre):
     '''
     #datos = np.loadtxt(nombre, dtype=[('f0',str),('f1',float),('f2',float),('f3',float)])
     datos = np.loadtxt(nombre, usecols=(1, 2, 3))
-    z = np.asarray(datos[:, 0])
-    mu = np.asarray(datos[:, 1])
-    err_mu = np.asarray(datos[:, 2])
+    z = datos[:, 0]
+    mu = datos[:, 1]
+    err_mu = datos[:, 2]
     return z, mu, err_mu
 
 
@@ -36,6 +36,7 @@ def mu_th(p, z):
     omega_m, omega_de, mu_00 = p
     N = z.size
     mu_0 = mu_00 * np.ones(N)
+    p = 5 * np.log10(d_l(omega_m, omega_de, z))
     mu = 5 * np.log10(d_l(omega_m, omega_de, z)) + mu_0
     return mu
 
@@ -44,25 +45,40 @@ def d_l(omega_m, omega_de, z):
     '''
     distancia de luminosidad
     '''
-    D = np.zeros(z.size)
+    '''
+    d = (1 + z) * integral(omega_m, omega_de, z)
+    return d
+    d = np.zeros(z.size)
     for i in range(z.size):
-        D[i] = (1 + z[i] * integral(omega_m, omega_de, z[i])
-    return D
+        d[i] = (1 + z[i]) * integral(omega_m, omega_de, z[i])
+    return d
+    '''
+    dist = []
+    for i in range(0, z.size):
+        if z.size == 1:
+            da = (1 + z) * integral(omega_m, omega_de, z)
+        else:
+            da = (1 + z[i]) * integral(omega_m, omega_de, z[i])
+        dist.append(da)
+    return dist
 
 
 def integral(omega_m, omega_de, z):
     '''
     integral que incluye el parametro de hubble
     '''
-    I = integrate.quad(f_integrar, 0, z, args=(omega_m, omega_de)) # revisar args!!!!
-    return I
+    #print z
+    I = quad(f_integrar, 0, z, args=(omega_m, omega_de)) # revisar args!!!!
+    #print I
+    return I[0]
 
 
-def f_integrar(omega_m, omega_de, z):
+def f_integrar(z, omega_m, omega_de):
     '''
     parametro de hubble normalizado por la constante de hubble
     '''
     h = omega_m * (z + 1) ** 3 + omega_de + (z + 1) ** 2 * (1 - omega_m - omega_de)
+    #print h
     return 1 / h
 
 
@@ -94,3 +110,4 @@ p0 = 0.3, 0.7, 43
 z_exp, mu_exp, err_mu = leer_archivo('SnIa_data.txt')
 b = residuo_modelo(p0, z_exp[0], mu_exp[0])
 a = optimizar(residuo_modelo, p0, z_exp, mu_exp)
+print a
