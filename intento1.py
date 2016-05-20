@@ -21,18 +21,22 @@ def leer_archivo(nombre):
     lee el archivo
     nombre debe ser un str
     '''
-    datos = np.loadtxt(nombre)
-    z = datos[:, 1]
-    mu = datos[:, 2]
-    err_mu = datos[:, 3]
+    #datos = np.loadtxt(nombre, dtype=[('f0',str),('f1',float),('f2',float),('f3',float)])
+    datos = np.loadtxt(nombre, usecols=(1, 2, 3))
+    z = np.asarray(datos[:, 0])
+    mu = np.asarray(datos[:, 1])
+    err_mu = np.asarray(datos[:, 2])
     return z, mu, err_mu
 
 
-def mu_th(omega_m, omega_de, mu_0, z):
+def mu_th(p, z):
     '''
     modulo de la distancia dependiente del redshift
     '''
-    mu = 5 * np.log10(D_l(omega_m, omega_de, z)) + mu_0
+    omega_m, omega_de, mu_00 = p
+    N = z.size
+    mu_0 = mu_00 * np.ones(N)
+    mu = 5 * np.log10(d_l(omega_m, omega_de, z)) + mu_0
     return mu
 
 
@@ -40,7 +44,9 @@ def d_l(omega_m, omega_de, z):
     '''
     distancia de luminosidad
     '''
-    D = (1 + z) * integral(omega_m, omega_de, z)
+    D = np.zeros(z.size)
+    for i in range(z.size):
+        D[i] = (1 + z[i] * integral(omega_m, omega_de, z[i])
     return D
 
 
@@ -60,21 +66,31 @@ def f_integrar(omega_m, omega_de, z):
     return 1 / h
 
 
-def residuo_modelo(omega_m, omega_de, z_exp, mu_exp):
+def residuo_modelo(p, z_exp, mu_exp):
     '''
     diferencia entre los valores del modelo y los experimentales
     '''
-    err = mu_exp - mu_th(omega_m, omega_de, z_exp)
-    pass
+    #print mu_exp.shape
+    #print mu_th(p, z_exp)
+    err = mu_exp - mu_th(p, z_exp)
+    return err
 
 
-def optimizar():
+def optimizar(err, p0, z_exp, mu_exp):
     '''
     calcula los mejores parametros que se ajustan al modelo
     '''
-    pass
+    opt = leastsq(err, p0, args=(z_exp, mu_exp))
+    return opt
 
 
 def chi_cuadrado(p, x, y, f):
     S = np.sum((y - f(p, x)) ** 2)
     return S
+
+
+#inicializacion
+p0 = 0.3, 0.7, 43
+z_exp, mu_exp, err_mu = leer_archivo('SnIa_data.txt')
+b = residuo_modelo(p0, z_exp[0], mu_exp[0])
+a = optimizar(residuo_modelo, p0, z_exp, mu_exp)
