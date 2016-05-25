@@ -76,9 +76,10 @@ def f_integrar(z, omega_m, omega_de):
     '''
     parametro de hubble normalizado por la constante de hubble
     '''
-    h = omega_m * (z + 1) ** 3 + omega_de + (z + 1) ** 2 * (1 - omega_m - omega_de)
+    h = omega_m * (z + 1) ** 3 + (1 - omega_m)
+    #h = omega_m * (z + 1) ** 3 + omega_de + (z + 1) ** 2 * (1 - omega_m - omega_de)
     #print h
-    return 1 / h
+    return 1 / np.sqrt(h)
 
 
 def residuo_modelo(p, z_exp, mu_exp):
