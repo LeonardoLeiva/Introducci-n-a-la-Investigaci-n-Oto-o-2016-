@@ -21,7 +21,6 @@ def leer_archivo(nombre):
     lee el archivo
     nombre debe ser un str
     '''
-    #datos = np.loadtxt(nombre, dtype=[('f0',str),('f1',float),('f2',float),('f3',float)])
     datos = np.loadtxt(nombre, usecols=(1, 2, 3))
     z = datos[:, 0]
     mu = datos[:, 1]
@@ -110,4 +109,6 @@ p0 = 0.3, 0.7, 43
 z_exp, mu_exp, err_mu = leer_archivo('SnIa_data.txt')
 b = residuo_modelo(p0, z_exp[0], mu_exp[0])
 a = optimizar(residuo_modelo, p0, z_exp, mu_exp)
-print a
+print a[0]
+print chi_cuadrado(a[0], z_exp, mu_exp, mu_th), chi_cuadrado(p0, z_exp, mu_exp, mu_th)
+np.save('resultados1.txt', a)
