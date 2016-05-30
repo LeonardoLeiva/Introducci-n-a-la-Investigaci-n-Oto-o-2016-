@@ -48,7 +48,7 @@ def f_i1(w_0, w_a, z):
 
 def hub(p, z):
     d_m, d_de, w_0, w_a = p
-    H = np.sqrt(d_m * (1 + z) ** 3 + d_de * fwexp(p, z) + (1 - d_m - d_de) * (1 + z) ** 2)
+    H = np.sqrt(np.absolute(d_m * (1 + z) ** 3 + d_de * fwexp(p, z) + (1 - d_m - d_de) * (1 + z) ** 2))
     return H
 
 
@@ -56,7 +56,7 @@ def EDO(z, DL, p):
     d_m, d_de, w_0, w_a = p
     E = np.zeros(len(z))
     for i in range(len(z)):
-        E[i - 1] = np.sqrt(1 + DL ** 2 * (1 - d_m - d_de)) / hub(p, z[i -1])
+        E[i - 1] = np.sqrt(1 + DL ** 2 * np.absolute((1 - d_m - d_de))) / hub(p, z[i -1])
     #E = np.sqrt(1 + DL ** 2 * (1 - d_m - d_de)) / hub(p, z)
     return E
 
@@ -89,7 +89,7 @@ DL_0 = 0.
 dDL_0 = 1.
 z_0 = 0.
 d_m0 = 0.32
-d_de0 = 1. - d_m0
+d_de0 = 0.679
 w_00 = - 1.
 w_a0 = 0.
 z_f = 1.

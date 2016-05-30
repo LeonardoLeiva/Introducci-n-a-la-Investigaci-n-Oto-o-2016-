@@ -35,7 +35,6 @@ def mu_th(p, z):
     omega_m, omega_de, mu_00 = p
     N = z.size
     mu_0 = mu_00 * np.ones(N)
-    p = 5 * np.log10(d_l(omega_m, omega_de, z))
     mu = 5 * np.log10(d_l(omega_m, omega_de, z)) + mu_0
     return mu
 
