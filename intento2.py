@@ -49,7 +49,7 @@ def mu_th(p, z):
     return mu
 
 
-def d_l(r, z):
+def d_l(r, z, e=0.0001):
     '''
     distancia de luminosidad
     '''
@@ -72,9 +72,15 @@ def d_l(r, z):
     omega_k = 1 - omega_m - omega_de
     for i in range(0, z.size):
         if z.size == 1:
-            da = (1 + z) * np.sin(np.sqrt(omega_k) * integral(r, z)) / np.sqrt(omega_k)
+            if (omega_k > -e) and (omega_k < e):
+                da = (1 + z) * integral(r, z)
+            else:
+                da = (1 + z) * np.sin(np.sqrt(omega_k) * integral(r, z)) / np.sqrt(omega_k)
         else:
-            da = (1 + z[i]) * np.sin(np.sqrt(omega_k) * integral(r, z[i])) / np.sqrt(omega_k)
+            if (omega_k > -e) and (omega_k < e):
+                da = (1 + z[i]) * integral(r, z[i])
+            else:
+                da = (1 + z[i]) * np.sin(np.sqrt(omega_k) * integral(r, z[i])) / np.sqrt(omega_k)
         dist.append(da)
     return dist
 
@@ -134,10 +140,14 @@ def chi_cuadrado(p, x, y, f):
 
 
 #inicializacion
-p0 = 0.3, 0.7, 43
+p0 = 0.31, 0.7, 43
 z_exp, mu_exp, err_mu = leer_archivo('SnIa_data.txt')
 b = residuo_modelo(p0, z_exp[0], mu_exp[0])
 a = optimizar(residuo_modelo, p0, z_exp, mu_exp)
+z = np.linspace(z_0, 2, 20)
+print z
+print d_l(p0, z)
 print a[0]
 print chi_cuadrado(a[0], z_exp, mu_exp, mu_th), chi_cuadrado(p0, z_exp, mu_exp, mu_th)
-np.save('resultados1.txt', a)
+z_0 = 0.1
+p0 = 0.32, 0.68
