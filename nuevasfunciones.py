@@ -17,47 +17,40 @@ from scipy.integrate import odeint
 # funciones estructurales
 
 
-def w_param(w_0, w_a, z):
-    W = w_0 + w_a * z / (z + 1)
+def w_param(w_0, w_a, z, modelo=0):
+    if modelo == 0:
+        W = - 1
+    elif modelo == 1:
+        W = w_0 + w_a * z / (z + 1)
     return W
 
 
-def fwexp(p, z):
-    d_m, d_de, w_0, w_a = p
-    '''
-    if z == 0:
-        F = 1
-    else:
-        F = np.exp(3 * quad(f_i1, 0, z, args=(d_m, d_de)))
-    F = []
-    for i in range(len(z)):
-        f = np.exp(3 * quad(f_i1, 0, z[i], args=(d_m, d_de)))
-        if len(F) == 1:
-            F = [f]
-        else:
-            F.append(f)
-    '''
-    F = np.exp(3 * quad(f_i1, 0, z, args=(d_m, d_de))[0])
+def fwexp(p, z, modelo=0):
+    F = np.exp(3 * quad(f_i1, 0, z, args=(p, modelo, ))[0])
     return F
 
 
-def f_i1(w_0, w_a, z):
-    G = (1 + w_param(w_0, w_a, z)) / (1 + z)
+def f_i1(p, z, modelo=0):
+    if modelo == 0:
+        G = 0
+    elif modelo == 1:
+        G = (1 + w_param(p[2], p[3], modelo, z)) / (1 + z)
     return G
 
 
-def hub(p, z):
-    d_m, d_de, w_0, w_a = p
-    H = np.sqrt(np.absolute(d_m * (1 + z) ** 3 + d_de * fwexp(p, z) + (1 - d_m - d_de) * (1 + z) ** 2))
+def hub(p, z, modelo=0):
+    d_m = p[0]
+    d_de = p[1]
+    H = np.sqrt(np.absolute(d_m * (1 + z) ** 3 + d_de * fwexp(p, z, modelo) + (1 - d_m - d_de) * (1 + z) ** 2))
     return H
 
 
-def EDO(z, DL, p):
-    d_m, d_de, w_0, w_a = p
+def EDO(z, DL, p, modelo=0):
+    d_m = p[0]
+    d_de = p[1]
     E = np.zeros(len(z))
     for i in range(len(z)):
-        E[i - 1] = np.sqrt(1 + DL ** 2 * np.absolute((1 - d_m - d_de))) / hub(p, z[i -1])
-    #E = np.sqrt(1 + DL ** 2 * (1 - d_m - d_de)) / hub(p, z)
+        E[i] = np.sqrt(1 - DL ** 2 * np.absolute(1 - d_m - d_de)) / hub(p, z[i], modelo)
     return E
 
 
@@ -77,22 +70,59 @@ def resolucion_EDO(p, DL_0, z_0, z_f):
     return DL
 
 
-def res_EDO(p, DL_0, dDL_0, z_f, z_0=0., paso=100):
-    init = DL_0, dDL_0
+def res_EDO(p, DL_0, z_f, z_0=0., paso=1000, modelo=0):
+    init = DL_0
     z = np.linspace(z_0, z_f, paso)
-    sol = odeint(EDO, init, z, args=(p,))
-    return [z, sol[:, 0], sol[:, 1]]
+    sol = odeint(EDO, init, z, args=(p, modelo, ))
+    return sol[:, 0]
+
+
+def Distancia(p, z, modelo=0, paso=100, DL_0=0):
+    d = []
+    for i in range(z.size):
+        if z.size == 1:
+            di = res_EDO(p, DL_0, z, 0, paso, modelo)[paso - 1]
+        else:
+            di = res_EDO(p, DL_0, z[i], 0, paso, modelo)[paso - 1]
+        d.append(di)
+    return d
+
+
+def D_L(p, z, modelo=0):
+    d_l = Distancia(p, z, modelo) * (1 + z)
+    return d_l
+
+
+def mu_th(r, z, modelo=0):
+    j = len(r)
+    mu_0 = r[j - 1]
+    mu = 5 * np.log10(D_L(r, z, modelo))
+    return mu
+    '''
+    mu = []
+    for n in range(z.size):
+        if z.size == 1:
+            m = 5 * np.log10(D_L(r, z, modelo)) + mu_0
+        else:
+            m = 5 * np.log10(D_L(r, z[n], modelo)) + mu_0
+        mu.append(m)
+    return mu
+    '''
 
 
 # inicializacion
 DL_0 = 0.
-dDL_0 = 1.
 z_0 = 0.
 d_m0 = 0.32
-d_de0 = 0.679
+d_de0 = 0.68
 w_00 = - 1.
 w_a0 = 0.
 z_f = 1.
-#z_f = np.linspace(z_0, 2, 20)
+mu_0 = 43.17
+z_f0 = np.linspace(0.1, 2, 20)
 p = d_m0, d_de0, w_00, w_a0
-print res_EDO(p, DL_0, dDL_0, z_f)
+r = p, mu_0
+#print res_EDO(p, DL_0, z_f, z_0, modelo=0)
+D = Distancia(p, z_f0)
+#mu = mu_th(r, z_f0)
+print z_f0, D
