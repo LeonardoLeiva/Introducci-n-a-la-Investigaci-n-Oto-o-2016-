@@ -85,18 +85,33 @@ def Distancia(p, z, modelo=0, paso=100, DL_0=0):
         else:
             di = res_EDO(p, DL_0, z[i], 0, paso, modelo)[paso - 1]
         d.append(di)
-    return d
+    return np.asarray(d)
 
 
-def D_L(p, z, modelo=0):
+def D_L(p, z, modelo=0, paso=100, DL_0=0):
+    '''
+    d = []
+    for i in range(z.size):
+        if z.size == 1:
+            di = res_EDO(p, DL_0, z, 0, paso, modelo)[paso - 1]
+            dii = di * (z + 1)
+        else:
+            di = res_EDO(p, DL_0, z[i], 0, paso, modelo)[paso - 1]
+            dii = di * (z[i] + 1)
+        d.append(di)
+    '''
     d_l = Distancia(p, z, modelo) * (1 + z)
-    return d_l
+    return np.asarray(d_l)
 
 
 def mu_th(r, z, modelo=0):
-    j = len(r)
-    mu_0 = r[j - 1]
-    mu = 5 * np.log10(D_L(r, z, modelo))
+    if modelo == 0:
+        mu_0 = r[4]
+        p = r[0], r[1], r[2], r[3]
+    else:
+        mu_0 = r[6]
+        p = r[0], r[1], r[2], r[3], r[4], r[5]
+    mu = 5 * np.log10(D_L(p, z, modelo))
     return mu
     '''
     mu = []
@@ -121,8 +136,8 @@ z_f = 1.
 mu_0 = 43.17
 z_f0 = np.linspace(0.1, 2, 20)
 p = d_m0, d_de0, w_00, w_a0
-r = p, mu_0
+r = d_m0, d_de0, w_00, w_a0, mu_0
 #print res_EDO(p, DL_0, z_f, z_0, modelo=0)
 D = Distancia(p, z_f0)
-#mu = mu_th(r, z_f0)
-print z_f0, D
+mu = mu_th(r, z_f0)
+print z_f0, mu
