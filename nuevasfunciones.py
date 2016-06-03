@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''
-primer intento de chi cuadrado para los datos experimentales de supernovas
-'''
-
 from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
