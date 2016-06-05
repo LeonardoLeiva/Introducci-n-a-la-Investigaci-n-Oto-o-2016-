@@ -9,6 +9,8 @@ import scipy.stats
 from scipy.optimize import leastsq
 from scipy import optimize as opt
 from scipy.integrate import odeint
+# la semilla!!!
+np.random.seed(8)
 
 # funciones estructurales previas (no mcmc)
 
@@ -205,7 +207,7 @@ def fill_likelihood(beta_grid, datos, error, model=0):
     return sal
 
 
-def paso_metropolis(p0, prior_params, datos, error=1, d=0.3, modelo=0):
+def paso_metropolis(p0, prior_params, datos, error=1, d=0.05, modelo=0):
     c = chi_cuadrado(p0, datos[0], datos[1], mu_th)
     print c
     if modelo == 0:
@@ -230,13 +232,15 @@ def paso_metropolis(p0, prior_params, datos, error=1, d=0.3, modelo=0):
         vp = v0 + d * rv
         posterior_p0 = prior([x0, y0, u0, v0], prior_params) * likelihood([x0, y0, u0, v0], datos, error)
         posterior_pp = prior([xp, yp, up, vp], prior_params) * likelihood([xp, yp, up, vp], datos, error)
-        if (posterior_pp / posterior_p0) > np.random.uniform(0, 1):
+        P = posterior_pp / posterior_p0
+        print P
+        if P > np.random.uniform(0, 1):
             p0 = [xp, yp, up, vp]
     print p0
     return p0
 
 
-def monte_carlo(p0, prior_params, N, datos, error=1, d=0.3, modelo=0):
+def monte_carlo(p0, prior_params, N, datos, error=1, d=0.05, modelo=0):
     if modelo == 0:
         muestra_met = np.zeros((N, 2))
         muestra_met[0] = [p0[0], p0[1]]
@@ -245,6 +249,7 @@ def monte_carlo(p0, prior_params, N, datos, error=1, d=0.3, modelo=0):
             muestra_met[i] = paso_metropolis(muestra_met[i-1], prior_params, datos, error, d, modelo) # intentar 0.1, 0.5, 1., 3., 10.
             if muestra_met[i][0] == muestra_met[i-1][0]:
                 rechazados += 1
+            print N
     elif modelo == 1:
         muestra_met = np.zeros((N, 4))
         muestra_met[0] = [p0[0], p0[1], p0[2], p0[3]]
@@ -253,6 +258,7 @@ def monte_carlo(p0, prior_params, N, datos, error=1, d=0.3, modelo=0):
             muestra_met[i] = paso_metropolis(muestra_met[i-1], prior_params, datos, d, error, d, modelo) # intentar 0.1, 0.5, 1., 3., 10.
             if muestra_met[i][0] == muestra_met[i-1][0]:
                 rechazados += 1
+            print N
     return muestra_met, rechazados
 
 
@@ -268,7 +274,7 @@ datos = z, mu - mu_0
 beta_grid1 = np.mgrid[0.:1.:50j, 0.:1.:50j]
 d_m_grid, d_de_grid = beta_grid1
 adivinanza1 = [0.2, 0.3, 0.8, 0.5]
-N = 100
+N = 1000
 p0 = 0.5, 0.5
 resultados = monte_carlo(p0, adivinanza1, N, datos)
 print resultados[1]
