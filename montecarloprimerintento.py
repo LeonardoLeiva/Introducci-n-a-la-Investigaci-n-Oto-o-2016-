@@ -46,7 +46,7 @@ def EDO(z, DL, p, modelo=0):
     d_de = p[1]
     E = np.zeros(len(z))
     for i in range(len(z)):
-        E[i] = np.sqrt(1 - DL ** 2 * np.absolute(1 - d_m - d_de)) / hub(p, z[i], modelo)
+        E[i] = np.sqrt(np.absolute(1 - DL ** 2 * np.absolute(1 - d_m - d_de))) / hub(p, z[i], modelo)
     return E
 
 
@@ -205,13 +205,70 @@ def fill_likelihood(beta_grid, datos, error, model=0):
     return sal
 
 
+def paso_metropolis(p0, prior_params, datos, error=1, d=0.3, modelo=0):
+    c = chi_cuadrado(p0, datos[0], datos[1], mu_th)
+    print c
+    if modelo == 0:
+        x0, y0 = p0
+        rx = np.random.uniform(low=-1, high=1)
+        ry = np.random.uniform(low=-1, high=1)
+        xp = x0 + d * rx
+        yp = y0 + d * ry
+        posterior_p0 = prior([x0, y0], prior_params) * likelihood([x0, y0], datos, error)
+        posterior_pp = prior([xp, yp], prior_params) * likelihood([xp, yp], datos, error)
+        if (posterior_pp / posterior_p0) > np.random.uniform(0, 1):
+            p0 = [xp, yp]
+    elif modelo == 1:
+        x0, y0, u0, v0 = p0
+        rx = np.random.uniform(low=-1, high=1)
+        ry = np.random.uniform(low=-1, high=1)
+        ux = np.random.uniform(low=-1, high=1)
+        vy = np.random.uniform(low=-1, high=1)
+        xp = x0 + d * rx
+        yp = y0 + d * ry
+        up = u0 + d * ru
+        vp = v0 + d * rv
+        posterior_p0 = prior([x0, y0, u0, v0], prior_params) * likelihood([x0, y0, u0, v0], datos, error)
+        posterior_pp = prior([xp, yp, up, vp], prior_params) * likelihood([xp, yp, up, vp], datos, error)
+        if (posterior_pp / posterior_p0) > np.random.uniform(0, 1):
+            p0 = [xp, yp, up, vp]
+    print p0
+    return p0
+
+
+def monte_carlo(p0, prior_params, N, datos, error=1, d=0.3, modelo=0):
+    if modelo == 0:
+        muestra_met = np.zeros((N, 2))
+        muestra_met[0] = [p0[0], p0[1]]
+        rechazados = 0
+        for i in range(1, N):
+            muestra_met[i] = paso_metropolis(muestra_met[i-1], prior_params, datos, error, d, modelo) # intentar 0.1, 0.5, 1., 3., 10.
+            if muestra_met[i][0] == muestra_met[i-1][0]:
+                rechazados += 1
+    elif modelo == 1:
+        muestra_met = np.zeros((N, 4))
+        muestra_met[0] = [p0[0], p0[1], p0[2], p0[3]]
+        rechazados = 0
+        for i in range(1, N):
+            muestra_met[i] = paso_metropolis(muestra_met[i-1], prior_params, datos, d, error, d, modelo) # intentar 0.1, 0.5, 1., 3., 10.
+            if muestra_met[i][0] == muestra_met[i-1][0]:
+                rechazados += 1
+    return muestra_met, rechazados
+
+
+def chi_cuadrado(p, x, y, f):
+    S = np.sum((y - f(p, x)) ** 2)
+    return S
+
+
 # inicializacion
 mu_0 = 43.15
 z, mu, mu_err = leer_archivo('SnIa_data.txt')
 datos = z, mu - mu_0
 beta_grid1 = np.mgrid[0.:1.:50j, 0.:1.:50j]
 d_m_grid, d_de_grid = beta_grid1
-adivinanza1 = [0.3, 0.1, 0.7, 0.1]
-A = fill_prior(beta_grid1, adivinanza1, 0)
-B = fill_likelihood(beta_grid1, datos, 1, 0)
-print A
+adivinanza1 = [0.2, 0.3, 0.8, 0.5]
+N = 100
+p0 = 0.5, 0.5
+resultados = monte_carlo(p0, adivinanza1, N, datos)
+print resultados[1]
