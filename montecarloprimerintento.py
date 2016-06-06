@@ -169,11 +169,11 @@ def likelihood(beta, datos, error, model=0):
     x, y = datos
     N = len(x)
     if model == 1:
-        s = np.sum(y - mu_th(beta, x, modelo=1))
+        s = np.sum((y - mu_th(beta, x, modelo=1)) ** 2)
         L = (2 * np.pi * error ** 2) ** (-N / 2.) * np.exp(- s /
                                                            (2 * error ** 2))
     elif model == 0:
-        s = np.sum(y - mu_th(beta, x, modelo=0))
+        s = np.sum((y - mu_th(beta, x, modelo=0)) ** 2)
         L = (2 * np.pi * error ** 2) ** (-N / 2) * np.exp(-s /
                                                           (2 * error ** 2))
     return L
@@ -209,7 +209,7 @@ def fill_likelihood(beta_grid, datos, error, model=0):
 
 def paso_metropolis(p0, prior_params, datos, error=1, d=0.05, modelo=0):
     c = chi_cuadrado(p0, datos[0], datos[1], mu_th)
-    print c
+    print("chi cuadrados: "+str(c))
     if modelo == 0:
         x0, y0 = p0
         rx = np.random.uniform(low=-1, high=1)
@@ -218,8 +218,12 @@ def paso_metropolis(p0, prior_params, datos, error=1, d=0.05, modelo=0):
         yp = y0 + d * ry
         posterior_p0 = prior([x0, y0], prior_params) * likelihood([x0, y0], datos, error)
         posterior_pp = prior([xp, yp], prior_params) * likelihood([xp, yp], datos, error)
-        if (posterior_pp / posterior_p0) > np.random.uniform(0, 1):
+        P = posterior_pp / posterior_p0
+        R = np.random.uniform(0, 1)
+        print("cuociente probabilidades: "+str(P/R))
+        if P > R:
             p0 = [xp, yp]
+            print "se acepta"
     elif modelo == 1:
         x0, y0, u0, v0 = p0
         rx = np.random.uniform(low=-1, high=1)
@@ -233,10 +237,12 @@ def paso_metropolis(p0, prior_params, datos, error=1, d=0.05, modelo=0):
         posterior_p0 = prior([x0, y0, u0, v0], prior_params) * likelihood([x0, y0, u0, v0], datos, error)
         posterior_pp = prior([xp, yp, up, vp], prior_params) * likelihood([xp, yp, up, vp], datos, error)
         P = posterior_pp / posterior_p0
-        print P
-        if P > np.random.uniform(0, 1):
+        R = np.random.uniform(0, 1)
+        print("cuociente probabilidades: "+str(P/R))
+        if P > R:
             p0 = [xp, yp, up, vp]
-    print p0
+            print "se acepta"
+    print("parametros: "+str(p0))
     return p0
 
 
@@ -249,7 +255,7 @@ def monte_carlo(p0, prior_params, N, datos, error=1, d=0.05, modelo=0):
             muestra_met[i] = paso_metropolis(muestra_met[i-1], prior_params, datos, error, d, modelo) # intentar 0.1, 0.5, 1., 3., 10.
             if muestra_met[i][0] == muestra_met[i-1][0]:
                 rechazados += 1
-            print N
+            print("contador: "+str(i))
     elif modelo == 1:
         muestra_met = np.zeros((N, 4))
         muestra_met[0] = [p0[0], p0[1], p0[2], p0[3]]
@@ -258,13 +264,30 @@ def monte_carlo(p0, prior_params, N, datos, error=1, d=0.05, modelo=0):
             muestra_met[i] = paso_metropolis(muestra_met[i-1], prior_params, datos, d, error, d, modelo) # intentar 0.1, 0.5, 1., 3., 10.
             if muestra_met[i][0] == muestra_met[i-1][0]:
                 rechazados += 1
-            print N
+            print("contador: "+str(i))
+    fig = plt.figure()
+    fig.clf()
+    ax1 = fig.add_subplot(111)
+    #ax1.xlim(-0.2, 1.2)
+    #ax1.ylim(-0.2, 1.2)
+    ax1.plot(muestra_met[:,0], muestra_met[:,1])
+    #ax1.plot(muestra_met[:,0], muestra_met[:,1], marker='None', ls='-', lw=0.3, color='w')
+    ax1.set_xlabel("Densidad de Materia")
+    ax1.set_ylabel("Densidad de Energia Oscura")
+    plt.legend(loc=4)
+    plt.savefig("prueba.png")
+    plt.draw()
+    plt.show()
+    '''
+    plt.plot(muestra_met[:,0], muestra_met[:,1], marker='None', ls='-', lw=0.3, color='w')
+    '''
     return muestra_met, rechazados
 
 
 def chi_cuadrado(p, x, y, f):
     S = np.sum((y - f(p, x)) ** 2)
     return S
+
 
 
 # inicializacion
@@ -274,7 +297,6 @@ datos = z, mu - mu_0
 beta_grid1 = np.mgrid[0.:1.:50j, 0.:1.:50j]
 d_m_grid, d_de_grid = beta_grid1
 adivinanza1 = [0.2, 0.3, 0.8, 0.5]
-N = 1000
+N = 100
 p0 = 0.5, 0.5
 resultados = monte_carlo(p0, adivinanza1, N, datos)
-print resultados[1]
