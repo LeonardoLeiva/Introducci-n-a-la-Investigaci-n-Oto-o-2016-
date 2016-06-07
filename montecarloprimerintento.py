@@ -180,6 +180,9 @@ def likelihood(beta, datos, error, model=0):
 
 
 def paso_metropolis(p0, prior_params, datos, a, error=1, d=0.05, modelo=0):
+    mu_0 = marginalizar_mu0(p0, datos)
+    dats = datos[0], datos[1] - mu_0
+    print mu_0
     if modelo == 0:
         x0, y0 = p0
         rx = np.random.uniform(low=-1, high=1)
@@ -191,8 +194,8 @@ def paso_metropolis(p0, prior_params, datos, a, error=1, d=0.05, modelo=0):
             ry = np.random.uniform(low=-1, high=1)
             xp = x0 + d * rx
             yp = y0 + d * ry
-        L_0 = likelihood([x0, y0], datos, error)
-        L_p = likelihood([xp, yp], datos, error)
+        L_0 = likelihood([x0, y0], dats, error)
+        L_p = likelihood([xp, yp], dats, error)
         posterior_p0 = prior([x0, y0], prior_params) * L_0[0]
         posterior_pp = prior([xp, yp], prior_params) * L_p[0]
         P = posterior_pp / posterior_p0
@@ -220,8 +223,8 @@ def paso_metropolis(p0, prior_params, datos, a, error=1, d=0.05, modelo=0):
             yp = y0 + d * ry
             up = u0 + d * ru
             vp = v0 + d * rv
-        L_0 = likelihood([x0, y0, u0, v0], datos, error)
-        L_p = likelihood([xp, yp, up, vp], datos, error)
+        L_0 = likelihood([x0, y0, u0, v0], dats, error)
+        L_p = likelihood([xp, yp, up, vp], dats, error)
         posterior_p0 = prior([x0, y0, u0, v0], prior_params) * L_0[0]
         posterior_pp = prior([xp, yp, up, vp], prior_params) * L_p[0]
         P = posterior_pp / posterior_p0
@@ -268,14 +271,25 @@ def chi_cuadrado(p, x, y, f):
     return S
 
 
+def marginalizar_mu0(r, datos, modelo=0):
+    z, m_obs, error_obs = datos
+    #A = np.sum((m_obs - mu_th(r, z, modelo)) ** 2 / error_obs ** 2)
+    B = np.sum((m_obs - mu_th(r, z, modelo)) / error_obs ** 2)
+    C = np.sum(1 / error_obs ** 2)
+    mu_0 = B / C
+    return mu_0
+
+
 # inicializacion
 mu_0 = 43.15
 z, mu, mu_err = leer_archivo('SnIa_data.txt')
-datos = z, mu - mu_0
+datos = z, mu, mu_err
+'''
 beta_grid1 = np.mgrid[0.:1.:50j, 0.:1.:50j]
 d_m_grid, d_de_grid = beta_grid1
+'''
 adivinanza1 = [0.2, 0.3, 0.8, 0.5]
-N = 500
+N = 1000
 p0 = 0.3, 0.9
 resultados = monte_carlo(p0, adivinanza1, N, datos)
 A = np.load('param_mcmc.npy')
@@ -283,7 +297,7 @@ B = np.load('chi.npy')
 C = np.load('rechazados.npy')
 print("parametros: "+str(A))
 print("chi cuadrados: "+str(B))
-print("rechazados: "+str(C))
+print("aceptados: "+str(C))
 # grafico
 fig = plt.figure()
 fig.clf()
