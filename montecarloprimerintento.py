@@ -9,6 +9,7 @@ import scipy.stats
 from scipy.optimize import leastsq
 from scipy import optimize as opt
 from scipy.integrate import odeint
+import time
 # la semilla!!!
 np.random.seed(8)
 
@@ -289,9 +290,12 @@ beta_grid1 = np.mgrid[0.:1.:50j, 0.:1.:50j]
 d_m_grid, d_de_grid = beta_grid1
 '''
 adivinanza1 = [0.2, 0.3, 0.8, 0.5]
-N = 1000
+N = 10
 p0 = 0.3, 0.9
+t0 = time.time()
 resultados = monte_carlo(p0, adivinanza1, N, datos)
+tf = time.time()-t0
+print("tiempo: "+str(tf))
 A = np.load('param_mcmc.npy')
 B = np.load('chi.npy')
 C = np.load('rechazados.npy')
