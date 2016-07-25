@@ -183,14 +183,13 @@ def likelihood(beta, datos, error, model=0):
 def paso_metropolis(p0, prior_params, datos, a, error=1, d=0.05, modelo=0):
     mu_0 = marginalizar_mu0(p0, datos)
     dats = datos[0], datos[1] - mu_0
-    print mu_0
     if modelo == 0:
         x0, y0 = p0
         rx = np.random.uniform(low=-1, high=1)
         ry = np.random.uniform(low=-1, high=1)
         xp = x0 + d * rx
         yp = y0 + d * ry
-        while xp < 0 or yp < 0:
+        while (xp < 0 or xp > 1) or (yp < 0 or yp > 1):
             rx = np.random.uniform(low=-1, high=1)
             ry = np.random.uniform(low=-1, high=1)
             xp = x0 + d * rx
@@ -244,7 +243,7 @@ def monte_carlo(p0, prior_params, N, datos, error=1, d=0.05, modelo=0):
         for i in range(1, N):
             P_M = paso_metropolis(muestra_met[i-1], prior_params, datos, a, error, d, modelo)
             muestra_met[i] = P_M[0] # intentar 0.1, 0.5, 1., 3., 10.
-            chi_cuad[i-1] = P_M[1]
+            chi_cuad[i] = P_M[1]
             a = P_M[2]
             print("contador: "+str(i))
     elif modelo == 1:
@@ -290,8 +289,8 @@ beta_grid1 = np.mgrid[0.:1.:50j, 0.:1.:50j]
 d_m_grid, d_de_grid = beta_grid1
 '''
 adivinanza1 = [0.2, 0.3, 0.8, 0.5]
-N = 10
-p0 = 0.3, 0.9
+N = 5000
+p0 = 0.999, 0.9999
 t0 = time.time()
 resultados = monte_carlo(p0, adivinanza1, N, datos)
 tf = time.time()-t0

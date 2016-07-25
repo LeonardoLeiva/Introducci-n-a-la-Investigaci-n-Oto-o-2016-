@@ -90,19 +90,18 @@ def prior(beta, p, model=0):
     return P
 
 
-def likelihood(beta, datos, error, model=0):
+def likelihood(beta, datos, s, error, model=0):
     '''
     verosimilitud. se aborda en una misma funcion los dos modelos
     '''
     x, y = datos
     N = len(x)
-    s = np.sum((y - mu_th(beta, x, modelo=0)) ** 2)
     L = (2 * np.pi * error ** 2) ** (-N / 2) * np.exp(-s /
                                                       (2 * error ** 2))
-    return L, s
+    return L
 
 
-def paso_metropolis(p0, prior_params, datos, L_0, a, error=1, d=0.05, modelo=0):
+def paso_metropolis(p0, prior_params, datos, s_0, a, error=1, d=0.05, modelo=0):
     mu_0 = marginalizar_mu0(p0, datos)
     dats = datos[0], datos[1] - mu_0
     x0, y0 = p0
@@ -118,24 +117,33 @@ def paso_metropolis(p0, prior_params, datos, L_0, a, error=1, d=0.05, modelo=0):
         ry = np.random.uniform(low=-1, high=1)
         yp = y0 + d * ry
         #print("densidad energia oscura: "+str(yp))
-    #L_0 = likelihood([x0, y0], dats, error)
-    L_p = likelihood([xp, yp], dats, error)
-    posterior_p0 = prior([x0, y0], prior_params) * L_0[0]
-    posterior_pp = prior([xp, yp], prior_params) * L_p[0]
-    if posterior_p0 > posterior_pp:
-        P = posterior_pp / posterior_p0
+    s_p = chi_cuadrado([xp, yp], dats, mu_th)
+    if s_p > s_0:
+        L_0 = likelihood([x0, y0], dats, s_0, error)
+        L_p = likelihood([xp, yp], dats, s_p, error)
+        posterior_p0 = prior([x0, y0], prior_params, s_0) * L_0
+        posterior_pp = prior([xp, yp], prior_params, s_p) * L_p
+        if posterior_p0 < 0.00001:
+            P = s_0 / s_p
+        else:
+            P = posterior_pp / posterior_p0
         R = np.random.uniform(0, 1)
+        print P, R
         if P > R:
-            p0 = [xp, yp]
+            p_n = [xp, yp]
             a += 1
-            L_0 = L_p
-            #print "se acepta"
+            s_n = s_p
+            print "SI"
+        else:
+            s_n = s_0
+            p_n = [x0, y0]
+            print "NO"
     else:
-        p0 = [xp, yp]
+        p_n = [xp, yp]
         a += 1
-        L_0 = L_p
-        #print "se acepta"
-    return p0, L_0, a
+        s_n = s_p
+        print "SI"
+    return p_n, s_n, a
 
 
 def monte_carlo(p0, prior_params, N, datos, error=1, d=0.05, modelo=0):
@@ -145,21 +153,19 @@ def monte_carlo(p0, prior_params, N, datos, error=1, d=0.05, modelo=0):
     muestra_met[0] = [p0[0], p0[1]]
     mu_0 = marginalizar_mu0(p0, datos)
     dats = datos[0], datos[1] - mu_0
-    L_0 = likelihood(p0, dats, error)
-    #posterior_p0 = prior(p0, prior_params) * L_0[0]
-    chi_cuad[0] = L_0[1]
+    chi_cuad[0] = chi_cuadrado(p0, dats, mu_th)
+    #chi_cuad[0] = L_0[1]
     for i in range(1, N):
-        P_M = paso_metropolis(muestra_met[i-1], prior_params, datos, L_0, a, error, d, modelo)
+        P_M = paso_metropolis(muestra_met[i-1], prior_params, datos, chi_cuad[i-1], a, error, d, modelo)
         muestra_met[i] = P_M[0]
-        L_0 = P_M[1]
-        chi_cuad[i] = L_0[1]
+        chi_cuad[i] = P_M[1]
         a = P_M[2]
         #posterior_p0 = P_M[4]
         print("contador: "+str(i))
     # guardar datos
-    np.save('a.npy', muestra_met)
-    np.save('b.npy', chi_cuad)
-    np.save('c.npy', a)
+    np.save('d.npy', muestra_met)
+    np.save('e.npy', chi_cuad)
+    np.save('f.npy', a)
     return muestra_met, chi_cuad, a
 
 
@@ -171,19 +177,25 @@ def marginalizar_mu0(r, datos, modelo=0):
     return mu_0
 
 
+def chi_cuadrado(p, dat, f):
+    x, y = dat
+    S = np.sum((y - f(p, x)) ** 2)
+    return S
+
+
 # inicializacion
 z, mu, mu_err = leer_archivo('SnIa_data.txt')
 datos = z, mu, mu_err
 adivinanza1 = [0.2, 0.3, 0.8, 0.5]
-N = 5000
-p0 = 0.99999, 0.99999
+N = 1000
+p0 = np.random.uniform(0, 1), np.random.uniform(0, 1)
 t0 = time.time()
 resultados = monte_carlo(p0, adivinanza1, N, datos)
 tf=time.time()-t0
 print("tiempo: "+str(tf))
-A = np.load('a.npy')
-B = np.load('b.npy')
-C = np.load('c.npy')
+A = np.load('d.npy')
+B = np.load('e.npy')
+C = np.load('f.npy')
 # grafico
 fig = plt.figure()
 fig.clf()
