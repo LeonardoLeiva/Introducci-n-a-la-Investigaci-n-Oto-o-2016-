@@ -170,7 +170,8 @@ def marginalizar_mu0(r, datos, modelo=0):
 
 def chi_cuadrado(p, dat, f):
     x, y, err = dat
-    S = np.sum(((y - f(p, x)) ** 2) / err)
+    S = np.sum(((y - f(p, x)) ** 2) / err ** 2)
+    print S
     return S
 
 
@@ -178,8 +179,9 @@ def chi_cuadrado(p, dat, f):
 z, mu, mu_err = leer_archivo('SnIa_data.txt')
 datos = z, mu, mu_err
 adivinanza1 = [0.4, 0.3, 0.6, 0.5]
-N = 5000
+N = 1000
 p0 = np.random.uniform(0, 1), np.random.uniform(0, 1)
+#p0 = 0.4, 0.6
 t0 = time.time()
 resultados = monte_carlo(p0, adivinanza1, N, datos, d=0.2)
 tf=time.time()-t0
