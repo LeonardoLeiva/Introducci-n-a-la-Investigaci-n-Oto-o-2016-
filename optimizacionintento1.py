@@ -113,7 +113,7 @@ def paso_metropolis(p0, prior_params, datos, L_0, a, error=1, d=0.05, modelo=0):
     while xp < 0 or xp > 1:
         rx = np.random.uniform(low=-1, high=1)
         xp = x0 + d * rx
-        #print("densidad masa: "+str(xp))
+        print("densidad masa: "+str(xp))
     while yp < 0 or yp > 1:
         ry = np.random.uniform(low=-1, high=1)
         yp = y0 + d * ry
