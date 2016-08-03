@@ -11,7 +11,7 @@ from scipy import optimize as opt
 from scipy.integrate import odeint
 import time
 # la semilla!!!
-np.random.seed(88)
+np.random.seed(888)
 
 
 # funciones estructurales previas (no mcmc)
@@ -82,7 +82,7 @@ def prior(beta, p, model=0):
     probabilidad a priori que se le da a la adivinanza inicial. dos modelos
     '''
     d_m, d_de = beta
-    a0, a1, b0, b1 = p
+    a0, b0, a1, b1 = p
     s0 = ((d_m - a0) / b0) ** 2
     s1 = ((d_de - a1) / b1) ** 2
     s = (s0 + s1) / 2.
@@ -99,7 +99,7 @@ def likelihood(s, error, model=0):
     return L
 
 
-def paso_metropolis(p0, prior_params, datos, s_0, a, error=1, d=0.05, modelo=0):
+def paso_metropolis(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d=0.05, modelo=0):
     mu_0 = marginalizar_mu0(p0, datos)
     dats = datos[0], datos[1] - mu_0, datos[2]
     x0, y0 = p0
@@ -117,12 +117,15 @@ def paso_metropolis(p0, prior_params, datos, s_0, a, error=1, d=0.05, modelo=0):
         #print("densidad energia oscura: "+str(yp))
     s_p = chi_cuadrado([xp, yp], dats, mu_th)
     if s_p > s_0:
-        P = s_0 / s_p
+        S = s_0 / s_p
+        L =  prior([xp, yp], prior_params) / prior([x0, y0], prior_params)
+        P = S * L
         R = np.random.uniform(0, 1)
         if P > R:
             p_n = [xp, yp]
             a += 1
             s_n = s_p
+            pasos_aceptados.append([xp, yp, s_p])
             #print "SI"
         else:
             s_n = s_0
@@ -132,6 +135,7 @@ def paso_metropolis(p0, prior_params, datos, s_0, a, error=1, d=0.05, modelo=0):
         p_n = [xp, yp]
         a += 1
         s_n = s_p
+        pasos_aceptados.append([xp, yp, s_p])
         #print "SI"
     return p_n, s_n, a
 
@@ -139,15 +143,18 @@ def paso_metropolis(p0, prior_params, datos, s_0, a, error=1, d=0.05, modelo=0):
 def monte_carlo(p0, prior_params, N, datos, error=1, d=0.05, modelo=0):
     a = 0
     muestra_met = np.zeros((N, 2))
+    pasos_aceptados = []
     chi_cuad = np.zeros(N)
     muestra_met[0] = [p0[0], p0[1]]
     mu_0 = marginalizar_mu0(p0, datos)
     dats = datos[0], datos[1] - mu_0, datos[2]
     chi_cuad[0] = chi_cuadrado(p0, dats, mu_th)
+    paso_0 = [p0[0], p0[1], chi_cuad[0]]
+    pasos_aceptados = [paso_0]
     print mu_0
     #chi_cuad[0] = L_0[1]
     for i in range(1, N):
-        P_M = paso_metropolis(muestra_met[i-1], prior_params, datos, chi_cuad[i-1], a, error, d, modelo)
+        P_M = paso_metropolis(muestra_met[i-1], pasos_aceptados, prior_params, datos, chi_cuad[i-1], a, error, d, modelo)
         muestra_met[i] = P_M[0]
         chi_cuad[i] = P_M[1]
         a = P_M[2]
@@ -157,6 +164,7 @@ def monte_carlo(p0, prior_params, N, datos, error=1, d=0.05, modelo=0):
     np.save('d.npy', muestra_met)
     np.save('e.npy', chi_cuad)
     np.save('f.npy', a)
+    np.save('g.npy', pasos_aceptados)
     return muestra_met, chi_cuad, a
 
 
@@ -171,15 +179,43 @@ def marginalizar_mu0(r, datos, modelo=0):
 def chi_cuadrado(p, dat, f):
     x, y, err = dat
     S = np.sum(((y - f(p, x)) ** 2) / err ** 2)
-    print S
     return S
+
+
+def residuo_modelo(p, z_exp, mu_exp):
+    '''
+    diferencia entre los valores del modelo y los experimentales
+    '''
+    err = mu_exp - mu_th(p, z_exp)
+    return err
+
+
+def optimizar(err, p0, z_exp, mu_exp):
+    '''
+    calcula los mejores parametros que se ajustan al modelo
+    '''
+    opt = leastsq(err, p0, args=(z_exp, mu_exp))
+    return opt
+
+
+def mejor_adivinanza(p0, datos):
+    z_exp, mu_exp, err = datos
+    mu_0 = marginalizar_mu0(p0, datos)
+    a = leastsq(residuo_modelo, p0, args=(z_exp, mu_exp))
+    return a[0]
 
 
 # inicializacion
 z, mu, mu_err = leer_archivo('SnIa_data.txt')
 datos = z, mu, mu_err
-adivinanza1 = [0.4, 0.3, 0.6, 0.5]
-N = 1000
+adivinanza1 = [0.29, 0.2, 0.78, 0.3]
+'''
+p00 = 0.78, 0.29
+mu_0 = marginalizar_mu0(p00, datos)
+dats = datos[0], datos[1] - mu_0, datos[2]
+print chi_cuadrado(p00, dats, mu_th)
+'''
+N = 5000
 p0 = np.random.uniform(0, 1), np.random.uniform(0, 1)
 #p0 = 0.4, 0.6
 t0 = time.time()
