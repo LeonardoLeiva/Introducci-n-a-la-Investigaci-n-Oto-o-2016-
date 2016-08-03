@@ -118,7 +118,11 @@ def paso_metropolis(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d
     s_p = chi_cuadrado([xp, yp], dats, mu_th)
     if s_p > s_0:
         S = s_0 / s_p
+        #S = np.exp(- s / 2)
+        pp = prior([xp, yp], prior_params)
+        p0 = prior([x0, y0], prior_params)
         L =  prior([xp, yp], prior_params) / prior([x0, y0], prior_params)
+        #P = S * L
         P = S * L
         R = np.random.uniform(0, 1)
         if P > R:
@@ -182,6 +186,15 @@ def chi_cuadrado(p, dat, f):
     return S
 
 
+def xi_cuadrado(p, dat, f):
+    z, m_obs, err_obs = dat
+    A = np.sum(((m_obs - mu_th(r, z, modelo)) ** 2) / error_obs ** 2)
+    B = np.sum((m_obs - mu_th(r, z, modelo)) / error_obs ** 2)
+    C = np.sum(1 / error_obs ** 2)
+    S = A - B ** 2 / C
+    return S
+
+
 def residuo_modelo(p, z_exp, mu_exp):
     '''
     diferencia entre los valores del modelo y los experimentales
@@ -215,7 +228,7 @@ mu_0 = marginalizar_mu0(p00, datos)
 dats = datos[0], datos[1] - mu_0, datos[2]
 print chi_cuadrado(p00, dats, mu_th)
 '''
-N = 5000
+N = 10
 p0 = np.random.uniform(0, 1), np.random.uniform(0, 1)
 #p0 = 0.4, 0.6
 t0 = time.time()
