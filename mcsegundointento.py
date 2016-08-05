@@ -99,9 +99,9 @@ def likelihood(s, error, model=0):
     return L
 
 
-def paso_metropolis(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d=0.05, modelo=0):
-    mu_0 = marginalizar_mu0(p0, datos)
-    dats = datos[0], datos[1] - mu_0, datos[2]
+def paso_metropolis(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d=0.1, modelo=0):
+    #mu_0 = marginalizar_mu0(p0, datos)
+    #dats = datos[0], datos[1] - mu_0, datos[2]
     x0, y0 = p0
     rx = np.random.uniform(low=-1, high=1)
     ry = np.random.uniform(low=-1, high=1)
@@ -115,9 +115,10 @@ def paso_metropolis(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d
         ry = np.random.uniform(low=-1, high=1)
         yp = y0 + d * ry
         #print("densidad energia oscura: "+str(yp))
-    s_p = chi_cuadrado([xp, yp], dats, mu_th)
+    s_p = xi_cuadrado([xp, yp], datos, mu_th)
     if s_p > s_0:
         S = s_0 / s_p
+        #S = np.exp((s_0 - s_p) / 2)
         #S = np.exp(- s / 2)
         pp = prior([xp, yp], prior_params)
         p0 = prior([x0, y0], prior_params)
@@ -144,18 +145,17 @@ def paso_metropolis(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d
     return p_n, s_n, a
 
 
-def monte_carlo(p0, prior_params, N, datos, error=1, d=0.05, modelo=0):
+def monte_carlo(p0, prior_params, N, datos, error=1, d=0.1, modelo=0):
     a = 0
     muestra_met = np.zeros((N, 2))
     pasos_aceptados = []
     chi_cuad = np.zeros(N)
     muestra_met[0] = [p0[0], p0[1]]
-    mu_0 = marginalizar_mu0(p0, datos)
-    dats = datos[0], datos[1] - mu_0, datos[2]
-    chi_cuad[0] = chi_cuadrado(p0, dats, mu_th)
+    #mu_0 = marginalizar_mu0(p0, datos)
+    #dats = datos[0], datos[1] - mu_0, datos[2]
+    chi_cuad[0] = xi_cuadrado(p0, datos, mu_th)
     paso_0 = [p0[0], p0[1], chi_cuad[0]]
     pasos_aceptados = [paso_0]
-    print mu_0
     #chi_cuad[0] = L_0[1]
     for i in range(1, N):
         P_M = paso_metropolis(muestra_met[i-1], pasos_aceptados, prior_params, datos, chi_cuad[i-1], a, error, d, modelo)
@@ -186,10 +186,10 @@ def chi_cuadrado(p, dat, f):
     return S
 
 
-def xi_cuadrado(p, dat, f):
-    z, m_obs, err_obs = dat
-    A = np.sum(((m_obs - mu_th(r, z, modelo)) ** 2) / error_obs ** 2)
-    B = np.sum((m_obs - mu_th(r, z, modelo)) / error_obs ** 2)
+def xi_cuadrado(p, dat, f, modelo=0):
+    z, m_obs, error_obs = dat
+    A = np.sum(((m_obs - f(p, z, modelo)) ** 2) / error_obs ** 2)
+    B = np.sum((m_obs - f(p, z, modelo)) / error_obs ** 2)
     C = np.sum(1 / error_obs ** 2)
     S = A - B ** 2 / C
     return S
@@ -228,9 +228,8 @@ mu_0 = marginalizar_mu0(p00, datos)
 dats = datos[0], datos[1] - mu_0, datos[2]
 print chi_cuadrado(p00, dats, mu_th)
 '''
-N = 10
+N = 5000
 p0 = np.random.uniform(0, 1), np.random.uniform(0, 1)
-#p0 = 0.4, 0.6
 t0 = time.time()
 resultados = monte_carlo(p0, adivinanza1, N, datos, d=0.2)
 tf=time.time()-t0
