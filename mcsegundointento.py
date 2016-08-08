@@ -20,7 +20,7 @@ np.random.seed(888)
 def hub(p, z, modelo=0):
     d_m = p[0]
     d_de = p[1]
-    H = np.sqrt(np.absolute(d_m * (1 + z) ** 3 + d_de * + (1 - d_m - d_de) * (1 + z) ** 2))
+    H = np.sqrt(np.absolute(d_m * (1 + z) ** 3 + d_de + (1 - d_m - d_de) * (1 + z) ** 2))
     return H
 
 
@@ -29,7 +29,8 @@ def EDO(z, DL, p, modelo=0):
     d_de = p[1]
     E = np.zeros(len(z))
     for i in range(len(z)):
-        E[i] = np.sqrt(np.absolute(1 - DL ** 2 * np.absolute(1 - d_m - d_de))) / hub(p, z[i], modelo)
+        op = (1 + DL ** 2 * (1 - d_m - d_de))
+        E[i] = np.sqrt(op) / hub(p, z[i], modelo)
     return E
 
 
@@ -115,10 +116,11 @@ def paso_metropolis(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d
         ry = np.random.uniform(low=-1, high=1)
         yp = y0 + d * ry
         #print("densidad energia oscura: "+str(yp))
-    s_p = xi_cuadrado([xp, yp], datos, mu_th)
+    xi = xi_cuadrado([xp, yp], datos, mu_th)
+    s_p = xi[0]
     if s_p > s_0:
-        S = s_0 / s_p
-        #S = np.exp((s_0 - s_p) / 2)
+        s = s_0 / s_p
+        S = np.exp((s_0 - s_p) / 2)
         #S = np.exp(- s / 2)
         pp = prior([xp, yp], prior_params)
         p0 = prior([x0, y0], prior_params)
@@ -153,7 +155,8 @@ def monte_carlo(p0, prior_params, N, datos, error=1, d=0.1, modelo=0):
     muestra_met[0] = [p0[0], p0[1]]
     #mu_0 = marginalizar_mu0(p0, datos)
     #dats = datos[0], datos[1] - mu_0, datos[2]
-    chi_cuad[0] = xi_cuadrado(p0, datos, mu_th)
+    xi = xi_cuadrado(p0, datos, mu_th)
+    chi_cuad[0] = xi[0]
     paso_0 = [p0[0], p0[1], chi_cuad[0]]
     pasos_aceptados = [paso_0]
     #chi_cuad[0] = L_0[1]
@@ -188,11 +191,13 @@ def chi_cuadrado(p, dat, f):
 
 def xi_cuadrado(p, dat, f, modelo=0):
     z, m_obs, error_obs = dat
-    A = np.sum(((m_obs - f(p, z, modelo)) ** 2) / error_obs ** 2)
-    B = np.sum((m_obs - f(p, z, modelo)) / error_obs ** 2)
+    dif = m_obs - f(p, z, modelo)
+    A = np.sum((dif ** 2) / error_obs ** 2)
+    B = np.sum(dif / error_obs ** 2)
     C = np.sum(1 / error_obs ** 2)
     S = A - B ** 2 / C
-    return S
+    mu_0 = B / C
+    return S, mu_0
 
 
 def residuo_modelo(p, z_exp, mu_exp):
@@ -231,7 +236,7 @@ print chi_cuadrado(p00, dats, mu_th)
 N = 5000
 p0 = np.random.uniform(0, 1), np.random.uniform(0, 1)
 t0 = time.time()
-resultados = monte_carlo(p0, adivinanza1, N, datos, d=0.2)
+resultados = monte_carlo(p0, adivinanza1, N, datos, d=0.05)
 tf=time.time()-t0
 print("tiempo: "+str(tf))
 A = np.load('d.npy')
