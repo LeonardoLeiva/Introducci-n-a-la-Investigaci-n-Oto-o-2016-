@@ -17,8 +17,6 @@ A = np.load('d.npy')
 B = np.load('e.npy')
 C = np.load('f.npy')
 D = np.load('g.npy')
-B0 = np.load('e0.npy')
-C0 = np.load('f0.npy')
 print A
 print B
 n = len(B)
