@@ -11,7 +11,7 @@ from scipy import optimize as opt
 from scipy.integrate import odeint
 import time
 # la semilla!!!
-np.random.seed(888)
+np.random.seed(8)
 
 
 # funciones estructurales previas (no mcmc)
@@ -37,22 +37,34 @@ def EDO(z, DL, p, modelo=0):
 def res_EDO(p, DL_0, z_f, z_0=0., paso=100, modelo=0):
     init = DL_0
     z = np.linspace(z_0, z_f, paso)
-    sol = odeint(EDO, init, z, args=(p, modelo, ))
-    return sol[:, 0]
+    sol = odeint(EDO, init, z, args=(p, modelo, ), mxstep=20)
+    a = sol[paso - 1, 0]
+    return a
+
+
+def edo_varios(p, z, paso=50, modelo=0):
+    '''
+    requiere que z este ordenado
+    '''
+    m = len(z)
+    mu = np.zeros(m)
+    mu[0] = res_EDO(p, 0., z[0], 0., paso)
+    for i in range(1, m):
+        if z[i-1] == z[i]:
+            mu[i] = mu[i-1]
+        elif z[i] >= z[i-1]:
+            mu[i] = res_EDO(p, mu[i-1], z[i], z[i-1], paso)
+        else:
+            print "error"
+    return mu
 
 
 def Distancia(p, z, modelo=0, paso=100, DL_0=0):
-    #a = time.time()-t0
-    d = []
-    for i in range(z.size):
-        if z.size == 1:
-            di = res_EDO(p, DL_0, z, 0, paso, modelo)[paso - 1]
-        else:
-            di = res_EDO(p, DL_0, z[i], 0, paso, modelo)[paso - 1]
-        d.append(di)
-    #b = time.time()-t0
-    #print("EDO: "+str(b-a))
-    return np.asarray(d)
+    if z.size == 1:
+        d = res_EDO(p, DL_0, z, 0, 100, modelo)
+    else:
+        d = edo_varios(p, z, paso, modelo)
+    return d
 
 
 def D_L(p, z, modelo=0, paso=100, DL_0=0):
@@ -62,7 +74,7 @@ def D_L(p, z, modelo=0, paso=100, DL_0=0):
 
 def mu_th(r, z, modelo=0):
     p = r[0], r[1]
-    mu = 5 * np.log10(D_L(p, z, modelo))
+    mu = 5 * np.log10(D_L(p, z, modelo, 25))
     return mu
 
 
@@ -72,10 +84,21 @@ def leer_archivo(nombre):
     nombre debe ser un str
     '''
     datos = np.loadtxt(nombre, usecols=(1, 2, 3))
+    #dtype = [('z', float), ('mu', float), ('error_mu', float)]
     z = datos[:, 0]
     mu = datos[:, 1]
     err_mu = datos[:, 2]
-    return z, mu, err_mu
+    n = np.argsort(z)
+    k = len(z)
+    zf = np.zeros(k)
+    muf = np.zeros(k)
+    err_muf = np.zeros(k)
+    for i in range(k):
+        m = n[i]
+        zf[i] = z[m]
+        muf[i] = mu[m]
+        err_muf[i] = err_mu[m]
+    return zf, muf, err_muf
 
 
 def prior(beta, p, model=0):
