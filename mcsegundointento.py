@@ -11,7 +11,7 @@ from scipy import optimize as opt
 from scipy.integrate import odeint
 import time
 # la semilla!!!
-np.random.seed(8)
+np.random.seed(888888)
 
 
 # funciones estructurales previas (no mcmc)
@@ -258,6 +258,7 @@ print chi_cuadrado(p00, dats, mu_th)
 '''
 N = 5000
 p0 = np.random.uniform(0, 1), np.random.uniform(0, 1)
+print p0
 t0 = time.time()
 resultados = monte_carlo(p0, adivinanza1, N, datos, d=0.05)
 tf=time.time()-t0

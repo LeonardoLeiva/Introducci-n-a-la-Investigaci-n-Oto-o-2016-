@@ -17,6 +17,12 @@ A = np.load('densidades.npy')
 B = np.load('chi_cuadrado.npy')
 C = np.load('cantidadpasosaceptados.npy')
 D = np.load('densidadesaceptadas.npy')
+'''
+A = np.load('d.npy')
+B = np.load('e.npy')
+C = np.load('f.npy')
+D = np.load('g.npy')
+'''
 print A
 print B
 n = len(B)
