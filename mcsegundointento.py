@@ -29,7 +29,7 @@ def EDO(z, DL, p, modelo=0):
     d_de = p[1]
     E = np.zeros(len(z))
     for i in range(len(z)):
-        op = (1 + DL ** 2 * (1 - d_m - d_de))
+        op = np.absolute((1 + DL ** 2 * (1 - d_m - d_de)))
         E[i] = np.sqrt(op) / hub(p, z[i], modelo)
     return E
 
@@ -191,10 +191,10 @@ def monte_carlo(p0, prior_params, N, datos, error=1, d=0.1, modelo=0):
         #posterior_p0 = P_M[4]
         print("contador: "+str(i))
     # guardar datos
-    np.save('d.npy', muestra_met)
-    np.save('e.npy', chi_cuad)
-    np.save('f.npy', a)
-    np.save('g.npy', pasos_aceptados)
+    np.save('densidades.npy', muestra_met)
+    np.save('chi_cuadrado.npy', chi_cuad)
+    np.save('cantidadpasosaceptados.npy', a)
+    np.save('densidadesaceptadas.npy', pasos_aceptados)
     return muestra_met, chi_cuad, a
 
 
@@ -262,9 +262,10 @@ t0 = time.time()
 resultados = monte_carlo(p0, adivinanza1, N, datos, d=0.05)
 tf=time.time()-t0
 print("tiempo: "+str(tf))
-A = np.load('d.npy')
-B = np.load('e.npy')
-C = np.load('f.npy')
+np.save('tiempo.npy', tf)
+A = np.load('densidadesaceptadas.npy')
+B = np.load('chi_cuadrado.npy')
+C = np.load('cantidadpasosaceptados.npy')
 # grafico
 fig = plt.figure()
 fig.clf()
