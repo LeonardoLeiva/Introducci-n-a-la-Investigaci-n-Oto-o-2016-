@@ -14,9 +14,6 @@ import time
 np.random.seed(888888)
 
 
-# funciones estructurales previas (no mcmc)
-
-
 def hub(p, z, modelo=0):
     d_m = p[0]
     d_de = p[1]
@@ -114,43 +111,50 @@ def prior(beta, p, model=0):
     return P
 
 
-def likelihood(s, error, model=0):
+def prior2(beta, p, model=0):
     '''
-    verosimilitud. se aborda en una misma funcion los dos modelos
+    probabilidad a priori que se le da a la adivinanza inicial. dos modelos
     '''
-    print s
-    L = np.exp(-s / (2 * error ** 2))
-    return L
+    '''
+    mean, std, cov = p
+    a0, a1 = mean[0], mean[1]
+    b0, b1 = std[0], std[1]
+    d_m, d_de = beta
+    print d_m, a0, b0
+    s0 = ((d_m - a0) / b0) ** 2
+    s1 = ((d_de - a1) / b1) ** 2
+    s = (s0 + s1) / 2.
+    P = np.exp(-s) / (2 * np.pi * b0 * b1)
+    '''
+    P=1
+    return P
 
 
 def paso_metropolis(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d=0.1, modelo=0):
-    #mu_0 = marginalizar_mu0(p0, datos)
-    #dats = datos[0], datos[1] - mu_0, datos[2]
     x0, y0 = p0
     rx = np.random.uniform(low=-1, high=1)
     ry = np.random.uniform(low=-1, high=1)
     xp = x0 + d * rx
     yp = y0 + d * ry
+    print [xp, yp]
     while xp < 0 or xp > 1:
         rx = np.random.uniform(low=-1, high=1)
         xp = x0 + d * rx
-        #print("densidad masa: "+str(xp))
     while yp < 0 or yp > 1:
         ry = np.random.uniform(low=-1, high=1)
         yp = y0 + d * ry
-        #print("densidad energia oscura: "+str(yp))
     xi = xi_cuadrado([xp, yp], datos, mu_th)
     s_p = xi[0]
     if s_p > s_0:
         s = s_0 / s_p
+        print s_0 - s_p
         S = np.exp((s_0 - s_p) / 2)
         #S = np.exp(- s / 2)
         pp = prior([xp, yp], prior_params)
         p0 = prior([x0, y0], prior_params)
         L =  prior([xp, yp], prior_params) / prior([x0, y0], prior_params)
-        #P = S * L
-        print S, L
         P = S * L
+        print S, L
         R = np.random.uniform(0, 1)
         if P > R:
             p_n = [xp, yp]
@@ -171,31 +175,88 @@ def paso_metropolis(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d
     return p_n, s_n, a
 
 
-def monte_carlo(p0, prior_params, N, datos, error=1, d=0.1, modelo=0):
+def paso_metrop(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d=0.1, modelo=0):
+    x0, y0 = p0
+    mean, std, cov = prior_params
+    r = np.random.multivariate_normal(mean, cov)
+    xp = x0 + d * r[0]
+    yp = y0 + d * r[1]
+    print xp, yp
+    while xp < 0 or xp > 1:
+        r = np.random.multivariate_normal(mean, cov)
+        xp = x0 + d * r[0]
+        yp = y0 + d * r[1]
+    while yp < 0 or yp > 1:
+        r = np.random.multivariate_normal(mean, cov)
+        xp = x0 + d * r[0]
+        yp = y0 + d * r[1]
+    xi = xi_cuadrado([xp, yp], datos, mu_th)
+    s_p = xi[0]
+    if s_p > s_0:
+        S = np.exp((s_0 - s_p) / 2)
+        print s_0 - s_p
+        pp = prior2([xp, yp], prior_params)
+        p0 = prior2([x0, y0], prior_params)
+        L =  pp / p0
+        P = S * L
+        print S, L
+        R = np.random.uniform(0, 1)
+        if P > R:
+            p_n = [xp, yp]
+            a += 1
+            s_n = s_p
+            pasos_aceptados.append([xp, yp, s_p])
+            #print "SI"
+        else:
+            s_n = s_0
+            p_n = [x0, y0]
+            print "NO"
+    elif s_p <= s_0:
+        p_n = [xp, yp]
+        a += 1
+        s_n = s_p
+        pasos_aceptados.append([xp, yp, s_p])
+        #print "SI"
+    return p_n, s_n, a
+
+
+def monte_carlo(p0, prior_params, N, datos, precadena=0, error=1, d=0.1, modelo=0):
     a = 0
     muestra_met = np.zeros((N, 2))
     pasos_aceptados = []
     chi_cuad = np.zeros(N)
     muestra_met[0] = [p0[0], p0[1]]
-    #mu_0 = marginalizar_mu0(p0, datos)
-    #dats = datos[0], datos[1] - mu_0, datos[2]
     xi = xi_cuadrado(p0, datos, mu_th)
     chi_cuad[0] = xi[0]
     paso_0 = [p0[0], p0[1], chi_cuad[0]]
     pasos_aceptados = [paso_0]
-    #chi_cuad[0] = L_0[1]
-    for i in range(1, N):
-        P_M = paso_metropolis(muestra_met[i-1], pasos_aceptados, prior_params, datos, chi_cuad[i-1], a, error, d, modelo)
-        muestra_met[i] = P_M[0]
-        chi_cuad[i] = P_M[1]
-        a = P_M[2]
-        #posterior_p0 = P_M[4]
-        print("contador: "+str(i))
+    if precadena == 0:
+        for i in range(1, N):
+            P_M = paso_metropolis(muestra_met[i-1], pasos_aceptados, prior_params, datos, chi_cuad[i-1], a, error, d, modelo)
+            muestra_met[i] = P_M[0]
+            chi_cuad[i] = P_M[1]
+            a = P_M[2]
+            print("contador: "+str(i))
+    else:
+        beta = np.load('densidadesaceptadas.npy')
+        a = beta[100:, 0]
+        b = beta[100:, 1]
+        A = np.asarray([a, b])
+        mean = np.mean(A, axis=1)
+        std = np.std(A, axis=1)
+        cov = np.cov(A)
+        prior_params = [mean, std, cov]
+        for i in range(1, N):
+            P_M = paso_metrop(muestra_met[i-1], pasos_aceptados, prior_params, datos, chi_cuad[i-1], a, error, d, modelo)
+            muestra_met[i] = P_M[0]
+            chi_cuad[i] = P_M[1]
+            a = P_M[2]
+            print("contador: "+str(i))
     # guardar datos
-    np.save('densidades.npy', muestra_met)
-    np.save('chi_cuadrado.npy', chi_cuad)
-    np.save('cantidadpasosaceptados.npy', a)
-    np.save('densidadesaceptadas.npy', pasos_aceptados)
+    np.save('a.npy', muestra_met)
+    np.save('b', chi_cuad)
+    np.save('c.npy', a)
+    np.save('d.npy', pasos_aceptados)
     return muestra_met, chi_cuad, a
 
 
@@ -224,51 +285,22 @@ def xi_cuadrado(p, dat, f, modelo=0):
     return S, mu_0
 
 
-def residuo_modelo(p, z_exp, mu_exp):
-    '''
-    diferencia entre los valores del modelo y los experimentales
-    '''
-    err = mu_exp - mu_th(p, z_exp)
-    return err
-
-
-def optimizar(err, p0, z_exp, mu_exp):
-    '''
-    calcula los mejores parametros que se ajustan al modelo
-    '''
-    opt = leastsq(err, p0, args=(z_exp, mu_exp))
-    return opt
-
-
-def mejor_adivinanza(p0, datos):
-    z_exp, mu_exp, err = datos
-    mu_0 = marginalizar_mu0(p0, datos)
-    a = leastsq(residuo_modelo, p0, args=(z_exp, mu_exp))
-    return a[0]
-
-
 # inicializacion
 z, mu, mu_err = leer_archivo('SnIa_data.txt')
 datos = z, mu, mu_err
 adivinanza1 = [0.29, 0.2, 0.78, 0.3]
-'''
-p00 = 0.78, 0.29
-mu_0 = marginalizar_mu0(p00, datos)
-dats = datos[0], datos[1] - mu_0, datos[2]
-print chi_cuadrado(p00, dats, mu_th)
-'''
-N = 5000
+N = 100
 p0 = np.random.uniform(0, 1), np.random.uniform(0, 1)
 print p0
 t0 = time.time()
-resultados = monte_carlo(p0, adivinanza1, N, datos, d=0.05)
+resultados = monte_carlo(p0, adivinanza1, N, datos, precadena=0, d=0.05)
 tf=time.time()-t0
 print("tiempo: "+str(tf))
 np.save('tiempo.npy', tf)
-A = np.load('densidadesaceptadas.npy')
-B = np.load('chi_cuadrado.npy')
-C = np.load('cantidadpasosaceptados.npy')
 # grafico
+A = np.load('d.npy')
+B = np.load('b.npy')
+C = np.load('c.npy')
 fig = plt.figure()
 fig.clf()
 ax1 = fig.add_subplot(111)

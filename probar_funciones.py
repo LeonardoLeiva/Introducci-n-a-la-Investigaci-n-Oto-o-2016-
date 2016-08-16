@@ -29,7 +29,7 @@ def EDO(z, DL, p, modelo=0):
     d_de = p[1]
     E = np.zeros(len(z))
     for i in range(len(z)):
-        op = (1 + DL ** 2 * (1 - d_m - d_de))
+        op = np.absolute((1 + DL ** 2 * (1 - d_m - d_de)))
         E[i] = np.sqrt(op) / hub(p, z[i], modelo)
     return E
 
@@ -37,32 +37,44 @@ def EDO(z, DL, p, modelo=0):
 def res_EDO(p, DL_0, z_f, z_0=0., paso=100, modelo=0):
     init = DL_0
     z = np.linspace(z_0, z_f, paso)
-    sol = odeint(EDO, init, z, args=(p, modelo, ))
-    return sol[:, 0]
+    sol = odeint(EDO, init, z, args=(p, modelo, ), mxstep=20)
+    a = sol[paso - 1, 0]
+    return a
+
+
+def edo_varios(p, z, paso=50, modelo=0):
+    '''
+    requiere que z este ordenado
+    '''
+    m = len(z)
+    mu = np.zeros(m)
+    mu[0] = res_EDO(p, 0., z[0], 0., paso)
+    for i in range(1, m):
+        if z[i-1] == z[i]:
+            mu[i] = mu[i-1]
+        elif z[i] >= z[i-1]:
+            mu[i] = res_EDO(p, mu[i-1], z[i], z[i-1], paso)
+        else:
+            print "error"
+    return mu
 
 
 def Distancia(p, z, modelo=0, paso=100, DL_0=0):
-    #a = time.time()-t0
-    d = []
-    for i in range(z.size):
-        if z.size == 1:
-            di = res_EDO(p, DL_0, z, 0, paso, modelo)[paso - 1]
-        else:
-            di = res_EDO(p, DL_0, z[i], 0, paso, modelo)[paso - 1]
-        d.append(di)
-    #b = time.time()-t0
-    #print("EDO: "+str(b-a))
-    return np.asarray(d)
+    if z.size == 1:
+        d = res_EDO(p, DL_0, z, 0, 100, modelo)
+    else:
+        d = edo_varios(p, z, paso, modelo)
+    return d
 
 
-def D_L(p, z, modelo=0, paso=100, DL_0=0):
+def D_L(p, z, modelo=0, paso=20, DL_0=0):
     d_l = Distancia(p, z, modelo) * (1 + z)
     return np.asarray(d_l)
 
 
 def mu_th(r, z, modelo=0):
     p = r[0], r[1]
-    mu = 5 * np.log10(D_L(p, z, modelo))
+    mu = 5 * np.log10(D_L(p, z, modelo, 25))
     return mu
 
 
@@ -72,18 +84,6 @@ def mu_theo(r, z, modelo=0):
     graficar_varios(p)
     mu = 5 * np.log10(D_L(p, z, modelo))
     return mu
-
-
-def leer_archivo(nombre):
-    '''
-    lee el archivo
-    nombre debe ser un str
-    '''
-    datos = np.loadtxt(nombre, usecols=(1, 2, 3))
-    z = datos[:, 0]
-    mu = datos[:, 1]
-    err_mu = datos[:, 2]
-    return z, mu, err_mu
 
 
 def xi_cuadrado(p, dat, f, modelo=0):
@@ -103,12 +103,22 @@ def leer_archivo(nombre):
     lee el archivo
     nombre debe ser un str
     '''
-    #datos = np.loadtxt(nombre, dtype=[('f0',str),('f1',float),('f2',float),('f3',float)])
     datos = np.loadtxt(nombre, usecols=(1, 2, 3))
+    #dtype = [('z', float), ('mu', float), ('error_mu', float)]
     z = datos[:, 0]
     mu = datos[:, 1]
     err_mu = datos[:, 2]
-    return z, mu, err_mu
+    n = np.argsort(z)
+    k = len(z)
+    zf = np.zeros(k)
+    muf = np.zeros(k)
+    err_muf = np.zeros(k)
+    for i in range(k):
+        m = n[i]
+        zf[i] = z[m]
+        muf[i] = mu[m]
+        err_muf[i] = err_mu[m]
+    return zf, muf, err_muf
 
 
 def graficar():
@@ -119,7 +129,7 @@ def graficar():
     fig = plt.figure()
     fig.clf()
     ax1 = fig.add_subplot(111)
-    ax1.plot(z, mu, '+')
+    ax1.plot(z, mu)
     ax1.set_xlabel("Redshift")
     ax1.set_ylabel("Modulo de la Distancia")
     plt.legend(loc=4)
@@ -134,7 +144,10 @@ def graficar_varios(p):
     '''
     dat = leer_archivo('SnIa_data.txt')
     z, mu, err = dat
+    t0 = time.time()
     mu_nuevo = mu_th(p, z)
+    tf=time.time()-t0
+    print("tiempo: "+str(tf))
     s, mu_0 = xi_cuadrado(p, dat, mu_th)
     mu_fin = mu_nuevo + mu_0
     print ("chi2: "+str(s))
@@ -168,7 +181,7 @@ def graficar_teorica(p):
     fig1 = plt.figure()
     fig1.clf()
     ax1 = fig1.add_subplot(111)
-    ax1.plot(z, mu, '+')
+    ax1.plot(z, mu_n, '+')
     ax1.set_xlabel("X")
     ax1.set_ylabel("W(x)")
     plt.savefig("grateor.png")
@@ -198,11 +211,9 @@ def optimizar(p0):
 #inicializacion
 #dm = input("")
 #dde = input("")
-p0 = 0.5, 0.5
+p0 = 0.669222206370, 0.916308050753
 #op = optimizar(p0)
 #p1 = op[0]
 #graficar()
-#graficar_varios(p1)
-#graficar_teorica(p1)
 graficar_varios(p0)
 graficar_teorica(p0)
