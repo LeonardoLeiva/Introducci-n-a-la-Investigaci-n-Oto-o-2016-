@@ -136,7 +136,6 @@ def paso_metropolis(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d
     ry = np.random.uniform(low=-1, high=1)
     xp = x0 + d * rx
     yp = y0 + d * ry
-    print [xp, yp]
     while xp < 0 or xp > 1:
         rx = np.random.uniform(low=-1, high=1)
         xp = x0 + d * rx
@@ -147,14 +146,12 @@ def paso_metropolis(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d
     s_p = xi[0]
     if s_p > s_0:
         s = s_0 / s_p
-        print s_0 - s_p
         S = np.exp((s_0 - s_p) / 2)
         #S = np.exp(- s / 2)
         pp = prior([xp, yp], prior_params)
         p0 = prior([x0, y0], prior_params)
         L =  prior([xp, yp], prior_params) / prior([x0, y0], prior_params)
         P = S * L
-        print S, L
         R = np.random.uniform(0, 1)
         if P > R:
             p_n = [xp, yp]
@@ -178,28 +175,33 @@ def paso_metropolis(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d
 def paso_metrop(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d=0.1, modelo=0):
     x0, y0 = p0
     mean, std, cov = prior_params
-    r = np.random.multivariate_normal(mean, cov)
+    '''
+    cov = np.sqrt(cov)
+    det = cov[0, 0] * cov[1, 1] - cov[0, 1] ** 2
+    d = d / np.sqrt(det)
+    '''
+    R = np.random.multivariate_normal(mean, cov)
+    r = R - mean
     xp = x0 + d * r[0]
     yp = y0 + d * r[1]
-    print xp, yp
     while xp < 0 or xp > 1:
-        r = np.random.multivariate_normal(mean, cov)
+        R = np.random.multivariate_normal(mean, cov)
+        r = R - mean
         xp = x0 + d * r[0]
         yp = y0 + d * r[1]
     while yp < 0 or yp > 1:
-        r = np.random.multivariate_normal(mean, cov)
+        R = np.random.multivariate_normal(mean, cov)
+        r = R - mean
         xp = x0 + d * r[0]
         yp = y0 + d * r[1]
     xi = xi_cuadrado([xp, yp], datos, mu_th)
     s_p = xi[0]
     if s_p > s_0:
         S = np.exp((s_0 - s_p) / 2)
-        print s_0 - s_p
         pp = prior2([xp, yp], prior_params)
         p0 = prior2([x0, y0], prior_params)
         L =  pp / p0
         P = S * L
-        print S, L
         R = np.random.uniform(0, 1)
         if P > R:
             p_n = [xp, yp]
@@ -254,7 +256,7 @@ def monte_carlo(p0, prior_params, N, datos, precadena=0, error=1, d=0.1, modelo=
             print("contador: "+str(i))
     # guardar datos
     np.save('a.npy', muestra_met)
-    np.save('b', chi_cuad)
+    np.save('b.npy', chi_cuad)
     np.save('c.npy', a)
     np.save('d.npy', pasos_aceptados)
     return muestra_met, chi_cuad, a
@@ -289,11 +291,21 @@ def xi_cuadrado(p, dat, f, modelo=0):
 z, mu, mu_err = leer_archivo('SnIa_data.txt')
 datos = z, mu, mu_err
 adivinanza1 = [0.29, 0.2, 0.78, 0.3]
-N = 100
+N = 5000
 p0 = np.random.uniform(0, 1), np.random.uniform(0, 1)
 print p0
+beta = np.load('densidadesaceptadas.npy')
+a = beta[100:, 0]
+b = beta[100:, 1]
+A = np.asarray([a, b]).T
+mean = np.mean(A, axis=0)
+print mean
+std = np.std(A, axis=0)
+print std
+cov = np.sqrt(np.cov(A.T))
+print cov
 t0 = time.time()
-resultados = monte_carlo(p0, adivinanza1, N, datos, precadena=0, d=0.05)
+resultados = monte_carlo(p0, adivinanza1, N, datos, precadena=1, d=0.6)
 tf=time.time()-t0
 print("tiempo: "+str(tf))
 np.save('tiempo.npy', tf)
