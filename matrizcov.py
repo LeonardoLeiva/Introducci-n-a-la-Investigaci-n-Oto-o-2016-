@@ -11,7 +11,7 @@ from scipy import optimize as opt
 from scipy.integrate import odeint
 import time
 # la semilla!!!
-np.random.seed(888888)
+np.random.seed(888)
 
 
 def hub(p, z, modelo=0):
@@ -222,7 +222,14 @@ def paso_metrop(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d=0.1
     return p_n, s_n, a
 
 
-def monte_carlo(p0, prior_params, N, datos, precadena=0, error=1, d=0.1, modelo=0):
+def monte_carlo(p0, prior_params, N, datos, error=1, d=0.1, modelo=0):
+    mantener = input("desea conservar el paso"+str(d)+"? (Y=1/N=0) =")
+    if mantener == 0:
+        paso = input("nuevo paso? =")
+        d = float(paso)
+    primcadena = input("primera cadena? (Y=1/N=0) = ")
+    numerodelacadena = input("numero de la cadena nueva? (ingresar un entero n >= 1) =")
+    t0 = time.time()
     a = 0
     muestra_met = np.zeros((N, 2))
     pasos_aceptados = []
@@ -232,18 +239,18 @@ def monte_carlo(p0, prior_params, N, datos, precadena=0, error=1, d=0.1, modelo=
     chi_cuad[0] = xi[0]
     paso_0 = [p0[0], p0[1], chi_cuad[0]]
     pasos_aceptados = [paso_0]
-    if precadena == 0:
+    if primcadena == 1:
         for i in range(1, N):
             P_M = paso_metropolis(muestra_met[i-1], pasos_aceptados, prior_params, datos, chi_cuad[i-1], a, error, d, modelo)
             muestra_met[i] = P_M[0]
             chi_cuad[i] = P_M[1]
             a = P_M[2]
             print("contador: "+str(i))
-    else:
-        beta = np.load('densidadesaceptadas.npy')
-        a = beta[100:, 0]
-        b = beta[100:, 1]
-        A = np.asarray([a, b])
+    elif primcadena == 0:
+        beta = np.loadtxt('densidadesaceptadas'+str(numerodelacadena - 1)+'.dat')
+        limp = limpiardatos(beta)
+        am, bm, cm = limp
+        A = np.asarray([am, bm])
         mean = np.mean(A, axis=1)
         std = np.std(A, axis=1)
         cov = np.cov(A)
@@ -254,12 +261,35 @@ def monte_carlo(p0, prior_params, N, datos, precadena=0, error=1, d=0.1, modelo=
             chi_cuad[i] = P_M[1]
             a = P_M[2]
             print("contador: "+str(i))
+    else:
+        print "error del numero de la cadena"
     # guardar datos
-    np.save('a.npy', muestra_met)
-    np.save('b.npy', chi_cuad)
-    np.save('c.npy', a)
-    np.save('d.npy', pasos_aceptados)
+    tf=time.time()-t0
+    print("tiempo: "+str(tf))
+    np.savetxt('tiempo'+str(numerodelacadena)+'.dat', np.asarray(tf).reshape(1,))
+    np.savetxt('densidades'+str(numerodelacadena)+'.dat', muestra_met)
+    np.savetxt('chi_cuadrado'+str(numerodelacadena)+'.dat', chi_cuad)
+    np.savetxt('cantidadpasosaceptados'+str(numerodelacadena)+'.dat', np.asarray(a).reshape(1,))
+    np.savetxt('densidadesaceptadas'+str(numerodelacadena)+'.dat', pasos_aceptados)
     return muestra_met, chi_cuad, a
+
+
+def limpiardatos(datos, tol=3):
+    a = datos[:, 0]
+    b = datos[:, 1]
+    chi = datos[:, 2]
+    mean = np.mean(chi)
+    std = np.std(chi)
+    criterio = mean + tol * std
+    n = len(chi)
+    for i in range(n):
+        if criterio >= chi[i]:
+            break
+    c = a[i:]
+    d = b[i:]
+    e = chi[i:]
+    return c, d, e
+
 
 
 def marginalizar_mu0(r, datos, modelo=0):
@@ -291,28 +321,12 @@ def xi_cuadrado(p, dat, f, modelo=0):
 z, mu, mu_err = leer_archivo('SnIa_data.txt')
 datos = z, mu, mu_err
 adivinanza1 = [0.29, 0.2, 0.78, 0.3]
-N = 5000
+N = input("largo de la cadena? (numero entero) =")
+N = int(N)
 p0 = np.random.uniform(0, 1), np.random.uniform(0, 1)
-print p0
-beta = np.load('densidadesaceptadas.npy')
-a = beta[100:, 0]
-b = beta[100:, 1]
-A = np.asarray([a, b]).T
-mean = np.mean(A, axis=0)
-print mean
-std = np.std(A, axis=0)
-print std
-cov = np.sqrt(np.cov(A.T))
-print cov
-t0 = time.time()
-resultados = monte_carlo(p0, adivinanza1, N, datos, precadena=1, d=0.6)
-tf=time.time()-t0
-print("tiempo: "+str(tf))
-np.save('tiempo.npy', tf)
+resultados = monte_carlo(p0, adivinanza1, N, datos, d=0.05)
 # grafico
-A = np.load('d.npy')
-B = np.load('b.npy')
-C = np.load('c.npy')
+A = np.loadtxt('densidadesaceptadas1.dat')
 fig = plt.figure()
 fig.clf()
 ax1 = fig.add_subplot(111)
