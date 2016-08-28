@@ -51,7 +51,7 @@ def graficar_chicuad(D, C, n, modelo):
         d_m = D[:, 0]
         w_0 = D[:, 1]
         w_1 = D[:, 2]
-        d_de = 1 - d_m
+        d_de = np.ones(len(d_m)) - d_m
         chi = D[:, 3]
     fig = plt.figure()
     fig.clf()
@@ -208,9 +208,9 @@ def regionesdeconfianza(datos, numerodelacadena, modelo):
         ax1.plot(Z1, Z2, '.', label='99.73$\%$ de los datos')
         ax1.plot(V1, V2, '.')
         ax1.set_xlabel("Densidad de Materia")
-        ax1.set_ylabel("Densidad de Energia Oscura")
+        ax1.set_ylabel("$w_1$")
         plt.legend(loc=4)
-        plt.savefig("regionesdeconfianza(densidad/w0)"+str(numerodelacadena)+".png")
+        plt.savefig("regionesdeconfianza(densidad-w0)"+str(numerodelacadena)+".png")
         plt.draw()
         plt.show()
         fig = plt.figure()
@@ -221,16 +221,16 @@ def regionesdeconfianza(datos, numerodelacadena, modelo):
         ax1.plot(Z1, Z3, '.', label='99.73$\%$ de los datos')
         ax1.plot(V1, V3, '.')
         ax1.set_xlabel("Densidad de Materia")
-        ax1.set_ylabel("Densidad de Energia Oscura")
+        ax1.set_ylabel("$w_0$")
         plt.legend(loc=4)
-        plt.savefig("regionesdeconfianza(densidad/w1)"+str(numerodelacadena)+".png")
+        plt.savefig("regionesdeconfianza(densidad-w1)"+str(numerodelacadena)+".png")
         plt.draw()
         plt.show()
         fig = plt.figure()
-        X4 = 1 - X1
-        Y4 = 1 - Y1
-        Z4 = 1 - Z1
-        V4 = 1 - V1
+        X4 = np.ones(len(X1)) - X1
+        Y4 = np.ones(len(Y1)) - Y1
+        Z4 = np.ones(len(Z1)) - Z1
+        V4 = np.ones(len(V1)) - V1
         fig.clf()
         ax1 = fig.add_subplot(111)
         ax1.plot(X1, X4, '.', label='68.3$\%$ de los datos')

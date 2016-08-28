@@ -237,6 +237,7 @@ def paso_metrop(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d=0.1
             xp = x0 + d * r[0]
             yp = y0 + d * r[1]
         Xp = xp, yp
+        X0 = x0, yo
     elif modelo == 1:
         x0, y0, z0 = p0
         xp = x0 + d * r[0]
@@ -249,6 +250,7 @@ def paso_metrop(p0, pasos_aceptados, prior_params, datos, s_0, a, error=1, d=0.1
             yp = y0 + d * r[1]
             zp = z0 + d * r[1]
         Xp = xp, yp, zp
+        X0 = x0, y0, z0
     xi = xi_cuadrado(Xp, datos, mu_th)
     s_p = xi[0]
     if s_p > s_0:
@@ -314,7 +316,7 @@ def monte_carlo(p0, prior_params, N, datos, error=1, d=0.1, modelo=0):
             print("contador: "+str(i))
     elif primcadena == 0:
         beta = np.loadtxt('densidadesaceptadas'+str(numerodelacadena - 1)+'.dat')
-        limp = limpiardatos(beta)
+        limp = limpiardatos(beta, modelo)
         if modelo == 0:
             am, bm, chim = limp
             A = np.asarray([am, bm])
